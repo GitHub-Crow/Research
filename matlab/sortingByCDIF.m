@@ -58,6 +58,7 @@ function signal = sortingByCDIF(toa, pri_range)
         xlabel('PRI / us', 'FontSize', 12, 'FontName', 'cambria');
         legend('actual count', 'first threshold', 'second threshold', ...
                'FontSize', 12, 'FontName', 'cambria');
+           
         % judge whether exist valid pri
         nPRI = length(priRecord);
         isFindSeq = false;
@@ -65,15 +66,14 @@ function signal = sortingByCDIF(toa, pri_range)
             onePRI = priRecord(k);
             if onePRI < minPRI, continue ; end
             if onePRI > maxPRI, break ; end
-            if TOA_END / MIN_EVENTS < onePRI, break ; end
-            [doublePRI, doubleK] = searchCloseTarget(2 * onePRI);
+            if TOA_END / MIN_EVENTS < onePRI, break ; end % there is no more events
+            [doublePRI, doubleK] = searchCloseTarget(priRecord, 2 * onePRI);
             if abs(doublePRI - 2 * onePRI) > TOLERANCE, continue ; end % there is no double pri
             oneEventCnt = indRecord(k).end - indRecord(k).begin + 1;
             doubleEventCnt = indRecord(doubleK).end - indRecord(doubleK).begin + 1;
             if oneEventCnt > C1 * TOA_END / onePRI && ...
                doubleEventCnt > C2 * TOA_END / doublePRI
-                searchSeq(k);
-                isFindSeq = true;
+                isFindSeq = searchSeq(k);
                 C1 = C1 * DECAY;
                 C2 = C2 * DECAY;
                 break ;
@@ -88,15 +88,43 @@ function signal = sortingByCDIF(toa, pri_range)
         end
     end
 
-    function searchSeq(k)
-       signal(end + 1).pri = priRecord(k);
+    
+
+function isSuccessful = searchSeq(k)
+       pri = priRecord(k);
        indArr = [];
+       seqTolerance = 0.4 * TOLERANCE;
        for j = indRecord(k).begin : indRecord(k).end
-           indArr(end + 1) = record(j, 2); % first event index
-           indArr(end + 1) = record(j, 3); % second event index
+           ind_1st = record(j, 2); % first event index
+           ind_2st = record(j, 3); % second event index
+           toa_seq_begin = toa(ind_1st);
+           tmpIndArr = [ind_1st, ind_2st];
+           eventK = 2;
+           while true
+               idealToa =  toa_seq_begin + eventK * pri;
+               if idealToa > TOA_END, break ; end
+               [actualToa, ind_] = searchCloseTarget(toa, idealToa);
+               if abs(actualToa - idealToa) <= eventK * seqTolerance && ...
+                  ind_ ~= tmpIndArr(end)
+                   tmpIndArr(end + 1) = ind_;
+                   eventK = eventK + 1;
+               else
+                   break ;
+               end
+           end
+           % judge whether search sequence successfully
+           if eventK > MIN_EVENTS
+               indArr = [indArr, tmpIndArr];
+           end
        end
        indArr = unique(indArr);
        indArr = sort(indArr);
+       if length(indArr) < MIN_EVENTS
+           isSuccessful = false;
+           return ;
+       end
+       isSuccessful = true;
+       signal(end + 1).pri = pri;
        signal(end).seq = toa(indArr);
        toa(indArr) = [];
     end
@@ -109,25 +137,25 @@ function signal = sortingByCDIF(toa, pri_range)
         end
     end
 
-    function [localPRI, localK] = searchCloseTarget(inArg)
-        L = 1; R = length(priRecord);
+    function [localPRI, localK] = searchCloseTarget(data, inArg)
+        L = 1; R = length(data);
         while R - L > 1
             M = ceil((L + R) / 2);
-            if priRecord(M) < inArg
+            if data(M) < inArg
                 L = M;
-            elseif priRecord(M) > inArg
+            elseif data(M) > inArg
                 R = M;
             else
-                localPRI = priRecord(M);
+                localPRI = data(M);
                 localK = M;
                 return ;
             end
         end
-        if inArg - priRecord(L) < priRecord(R) - inArg
-            localPRI = priRecord(L);
+        if inArg - data(L) < data(R) - inArg
+            localPRI = data(L);
             localK = L;
         else
-            localPRI = priRecord(R);
+            localPRI = data(R);
             localK = R;
         end
     end

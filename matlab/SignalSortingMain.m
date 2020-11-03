@@ -43,7 +43,7 @@ sinTOA2 = generateTOA([SIN_PRI_PARAMS_2], TOA_RANGE, PRIType.Sin);
 sinTOA = mergeSortedArray(sinTOA1, sinTOA2);
 
 %% estimate PRI
-ALGO_TYPE = 1;
+ALGO_TYPE = 2;
 % 0 for TTP transform; 1 for PRI transform; 2 for CDIF; 
 
 if ALGO_TYPE == 0
