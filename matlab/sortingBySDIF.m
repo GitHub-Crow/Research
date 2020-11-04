@@ -1,12 +1,10 @@
-function signal = sortingByCDIF(toa, pri_range)
+function signal = sortingBySDIF(toa, pri_range)
     %% set parameters
-    % one level and two level threshold coefficient 
-    % it is clear that wrong sorting extract more toa than actual
-    % situation, which will pose bad influence on subsequent sorting, so
-    % set DECAY to decrease threshold for correct sorting futher. 
-    C1 = 0.7; C2 = 0.4; DECAY = 0.8;
+    MAX_PULSE_LOSS_RATIO = 0.5;
+    DECAY = 0.8;
+    BIN_COEFF = 0.6;
     minPRI = pri_range(1); maxPRI = pri_range(2);
-    TOLERANCE = 0.01 * (maxPRI - minPRI);
+    TOLERANCE = 0.02 * (maxPRI - minPRI);
     LEVEL = 5; % maximum level 
     MIN_EVENTS = 5; % minimim events count need for a squence search 
 
@@ -20,6 +18,7 @@ function signal = sortingByCDIF(toa, pri_range)
     TOA_END = toa(end);
     
     while diff < LEVEL
+        record = [];
         buildKLevelHist(diff, toa);
         record = sortrows(record);
         % build hist by slip windows
@@ -42,47 +41,55 @@ function signal = sortingByCDIF(toa, pri_range)
             indRecord(end).end = Rind - 1;
             ind = ind + 1;
         end
-        
-        % debug info image
-        close all; figure ;
-        actualCount = zeros(1, length(priRecord));
-        for k = 1 : length(priRecord)
+    
+        nPRI = length(priRecord);
+        th = MAX_PULSE_LOSS_RATIO * nPRI * exp(-priRecord ./ (BIN_COEFF * priRecord(end)));
+        actualCount = zeros(1, nPRI);
+        for k = 1 : nPRI
             actualCount(k) = indRecord(k).end - indRecord(k).begin + 1;
         end
+        % debug info image
+        close all; figure ;
         plot(priRecord, actualCount, 'LineWidth', 1.8); hold on
-        plot(priRecord, C1 * TOA_END ./ priRecord, 'LineWidth', 2.2); hold on
-        plot(priRecord, C2 * TOA_END ./ priRecord, 'LineWidth', 2.2); hold on
+        plot(priRecord, th, 'LineWidth', 2.2); hold on
         ylabel('count', 'FontSize', 12, 'FontName', 'cambria');
         xlabel('PRI / us', 'FontSize', 12, 'FontName', 'cambria');
-        xlim([minPRI, inf]);
-        legend('actual count', 'first threshold', 'second threshold', ...
+        legend('actual count', 'threshold', ...
                'FontSize', 12, 'FontName', 'cambria');
-           
-        % only search peak PRI
-        [~, peakIndArr] = findpeaks(actualCount);
+        % judge and search sequence
         isFindSeq = false;
-        for k = peakIndArr
-            onePRI = priRecord(k);
-            if onePRI < minPRI, continue ; end
-            if onePRI > maxPRI, break ; end
-            if TOA_END / MIN_EVENTS < onePRI, break ; end % there is no more events
-            
-            % find pri which has maximum actual events count and whose
-            % value meet double of onePRI
-            doubleEventCnt = max(actualCount(abs(priRecord - 2 * onePRI) <= TOLERANCE));
-            oneEventCnt = actualCount(k);
-            if oneEventCnt > C1 * TOA_END / onePRI && ...
-               doubleEventCnt > C2 * TOA_END / (2 * onePRI)
-                isFindSeq = searchSeq(k);
-                break ;
+        
+        % only check peak PRI
+        potentialPRIInd = find(actualCount >= th);
+        [~, peakPRIInd] = findpeaks(actualCount);
+        potentialPRIInd = intersect(potentialPRIInd, peakPRIInd);
+        
+        % search by actual event count 
+        combinedArr = sortrows([actualCount(potentialPRIInd)', potentialPRIInd'], 'descend');
+        potentialPRIInd = combinedArr(:, 2);
+        potentialPRIInd = potentialPRIInd';
+        nPInd = length(potentialPRIInd);
+        % if peack not exceed threshold then do subharmonic checking
+        [~, maxCountPRIInd] = max(actualCount);
+        peakPRI = priRecord(maxCountPRIInd);
+        if nPInd && ~ismember(maxCountPRIInd, potentialPRIInd)
+            subharmonicTolerance = ceil(potentialPRIInd(1) / peakPRI) * TOLERANCE;
+            if mod(priRecord(potentialPRIInd(1)), peakPRI) <= subharmonicTolerance ||...     % example : mod(15, 7)
+               peakPRI - mod(priRecord(potentialPRIInd(1)), peakPRI) <= subharmonicTolerance % example : mod(21, 7)
+                isFindSeq = searchSeq(maxCountPRIInd);
             end
-            
+        else
+            if diff ~= 1 || nPInd == 1
+                for pInd = potentialPRIInd
+                    isFindSeq = searchSeq(pInd);
+                    if isFindSeq, break ; end
+                end
+            end
         end
         if isFindSeq
             diff = 1;
             record = [];
-            C1 = C1 * DECAY;
-            C2 = C2 * DECAY;
+            MAX_PULSE_LOSS_RATIO = MAX_PULSE_LOSS_RATIO * DECAY;
         else
             diff = diff + 1;
         end

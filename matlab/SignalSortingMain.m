@@ -43,7 +43,7 @@ sinTOA2 = generateTOA([SIN_PRI_PARAMS_2], TOA_RANGE, PRIType.Sin);
 sinTOA = mergeSortedArray(sinTOA1, sinTOA2);
 
 %% estimate PRI
-ALGO_TYPE = 2;
+ALGO_TYPE = 3;
 % 0 for TTP transform; 1 for PRI transform; 2 for CDIF; 
 
 if ALGO_TYPE == 0
@@ -97,6 +97,26 @@ elseif ALGO_TYPE == 2
     staggerSig = sortingByCDIF(staggerTOA, PRI_DETECTED_RANGE);
     slipSig = sortingByCDIF(slipTOA, PRI_DETECTED_RANGE);
     sinSig = sortingByCDIF(sinTOA, PRI_DETECTED_RANGE);
+    
+    close all;
+    figure ;
+    cax = subplot(231);
+    plotTOA(cax, stableSig, 'stable PRI');
+    cax = subplot(232);
+    plotTOA(cax, wobbleSig, 'wobble PRI');
+    cax = subplot(233);
+    plotTOA(cax, staggerSig, 'stagger PRI');
+    cax = subplot(234);
+    plotTOA(cax, slipSig, 'slip PRI');
+    cax = subplot(235);
+    plotTOA(cax, sinSig, 'sine PRI');
+    
+elseif ALGO_TYPE == 3
+    stableSig = sortingBySDIF(stableTOA, PRI_DETECTED_RANGE);
+    wobbleSig = sortingBySDIF(wobbleTOA, PRI_DETECTED_RANGE);
+    staggerSig = sortingBySDIF(staggerTOA, PRI_DETECTED_RANGE);
+    slipSig = sortingBySDIF(slipTOA, PRI_DETECTED_RANGE);
+    sinSig = sortingBySDIF(sinTOA, PRI_DETECTED_RANGE);
     
     close all;
     figure ;
