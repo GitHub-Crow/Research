@@ -1,4 +1,11 @@
 clc; close all; clear ;
+%% statement
+% this program realize four PRI only signal sorting algorithm, including
+% TTP, CDIF, SDIF, PRI transform. Five type PRI is generated for sorting,
+% including stable, wobble, stagger, slip, sin, and each of them formed 
+% by two different parameters. Variable ALOG_TYPE is used for choosing
+% which algorithm you want to implement. 
+
 %% set parameters
 TOA_RANGE = [0, 1e5];
 PRI_DETECTED_RANGE  = [300, 700];
