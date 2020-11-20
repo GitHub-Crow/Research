@@ -1,7 +1,7 @@
 function toa = generateTOA(params, toa_range, pri_type)
 % generate toa by pri_type, which between toa_range
 
-    float_rate = 0.01; reject_rate = 0.1;
+    float_rate = 0.001; reject_rate = 0.1;
     
     % chosse pri generator type
     switch pri_type
@@ -26,7 +26,7 @@ function toa = generateTOA(params, toa_range, pri_type)
     toa(ind) = tBegin;
     while toa(end) <= tEnd
         pri = f(params);
-        toa(ind + 1) = toa(end)  + (1 + (2 * rand - 1) * float_rate) * pri;
+        toa(ind + 1) = toa(end)  + (1 + (2 * randn - 1) * float_rate) * pri;
         ind = ind + 1;
     end
     toa(end) = [];

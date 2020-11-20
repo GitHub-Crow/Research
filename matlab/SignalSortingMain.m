@@ -50,8 +50,8 @@ sinTOA2 = generateTOA([SIN_PRI_PARAMS_2], TOA_RANGE, PRIType.Sin);
 sinTOA = mergeSortedArray(sinTOA1, sinTOA2);
 
 %% estimate PRI
-ALGO_TYPE = 3;
-% 0 for TTP transform; 1 for PRI transform; 2 for CDIF; 
+ALGO_TYPE = 0;
+% 0 for TTP transform; 1 for PRI transform; 2 for CDIF; 3 for SDIF
 
 if ALGO_TYPE == 0
     binNum = 10;
@@ -62,6 +62,17 @@ if ALGO_TYPE == 0
     sinD = sortingByTTP(sinTOA, PRI_DETECTED_RANGE, binNum);
     close all;
     figure ;
+    % unit test difference between ans and labels
+    testAns = ones(size(stableD));
+    for k = 1 : length(stableD)
+        if ismember(stableTOA(k), stableTOA1)
+            testAns(k) = STABLE_PRI_1;
+        else
+            testAns(k) = STABLE_PRI_2;
+        end
+    end
+    idx = find(stableD);
+    plot(abs(testAns(idx) - stableD(idx)), 'r-', 'LineWidth', 2);
     cax = subplot(231);
     plotTOA_PRI(cax, stableTOA, stableD, 'stable PRI');
     ylim(PRI_DETECTED_RANGE);

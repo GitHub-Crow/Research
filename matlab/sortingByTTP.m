@@ -40,7 +40,7 @@ function priArr = sortingByTTP(toa, priRange, binNum)
             v = inverseMat(i, j);
             if ~isnan(u) && ~isnan(v)
                 if abs(v - u) > delta
-                    towardMat(i, j) = 0;
+                    towardMat(i, j) = nan;
                 end
             else
                 break ;
